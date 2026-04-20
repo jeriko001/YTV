@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YTV</title>
+  <meta name="description" content="YTV – Aggregatore canali sportivi YouTube" />
+  <meta name="theme-color" content="#141414" />
+
+  <!-- PWA Manifest inline via JS -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icone/YTV.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icone/YTV.png" />
+
+  <!-- Google Fonts: Bebas Neue + DM Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#141414',
+            surface: '#1e1e1e',
+            card: '#252525',
+            cardHover: '#2e2e2e',
+            accent: '#e50914',
+            accentHover: '#f40612',
+            muted: '#999',
+            faint: '#444',
+          },
+          fontFamily: {
+            display: ['Bebas Neue', 'sans-serif'],
+            body: ['DM Sans', 'sans-serif'],
+          },
+          boxShadow: {
+            card: '0 4px 20px rgba(0,0,0,0.6)',
+            cardHover: '0 8px 40px rgba(229,9,20,0.25)',
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background-color: #141414;
+      font-family: 'DM Sans', sans-serif;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    /* GRID responsive */
+    .channel-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 480px)  { .channel-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 768px)  { .channel-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (min-width: 1024px) { .channel-grid { grid-template-columns: repeat(5, 1fr); } }
+    @media (min-width: 1280px) { .channel-grid { grid-template-columns: repeat(6, 1fr); } }
+    @media (min-width: 1600px) { .channel-grid { grid-template-columns: repeat(7, 1fr); } }
+
+    /* CARD */
+    .channel-card {
+      background: #252525;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.2s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+    }
+    .channel-card:hover {
+      transform: scale(1.06) translateY(-3px);
+      box-shadow: 0 8px 40px rgba(229,9,20,0.28);
+      background: #2e2e2e;
+      z-index: 10;
+    }
+    .channel-card:active { transform: scale(0.98); }
+
+    /* IMAGE WRAPPER — aspect ratio quadrato */
+    .card-img-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      background: #1a1a1a;
+      overflow: hidden;
+      position: relative;
+    }
+    .card-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    .channel-card:hover .card-img-wrap img { transform: scale(1.08); }
+
+    /* LIVE BADGE */
+    .live-badge {
+      position: absolute;
+      top: 7px;
+      left: 7px;
+      background: #e50914;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 2px 7px;
+      border-radius: 4px;
+      animation: pulse-badge 1.6s ease-in-out infinite;
+      text-transform: uppercase;
+    }
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(229,9,20,0.6); }
+      50% { opacity: 0.85; box-shadow: 0 0 0 5px rgba(229,9,20,0); }
+    }
+
+    /* CARD FOOTER */
+    .card-footer {
+      padding: 8px 10px 10px;
+    }
+    .card-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: #e8e8e8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .card-tag {
+      font-size: 9px;
+      background: #333;
+      color: #aaa;
+      padding: 2px 5px;
+      border-radius: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    /* SEARCH BAR */
+    .search-wrap {
+      position: relative;
+    }
+    #searchInput {
+      width: 100%;
+      background: #2a2a2a;
+      border: 1.5px solid #3a3a3a;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      padding: 12px 16px 12px 44px;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #searchInput:focus { border-color: #e50914; background: #2f2f2f; }
+    #searchInput::placeholder { color: #666; }
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+      pointer-events: none;
+    }
+    #clearBtn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: #444;
+      border: none;
+      color: #ccc;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1;
+    }
+    #clearBtn.visible { display: flex; }
+
+    /* FILTER PILLS */
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 13px;
+      border-radius: 20px;
+      border: 1.5px solid #3a3a3a;
+      background: transparent;
+      color: #aaa;
+      cursor: pointer;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .pill:hover { border-color: #e50914; color: #fff; }
+    .pill.active { background: #e50914; border-color: #e50914; color: #fff; }
+
+    /* HEADER */
+    .site-header {
+      background: linear-gradient(180deg, #0a0a0a 0%, #141414 100%);
+      border-bottom: 1px solid #222;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    /* LOGO */
+    .logo-img { height: 36px; width: auto; }
+
+    /* COUNT BADGE */
+    #countBadge {
+      font-size: 12px;
+      color: #777;
+      white-space: nowrap;
+    }
+
+    /* NO RESULTS */
+    #noResults {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+      color: #555;
+    }
+    #noResults svg { margin: 0 auto 16px; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #141414; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    /* FOOTER */
+    footer { border-top: 1px solid #222; }
+
+    /* Shimmer placeholder for missing images */
+    .img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(18px, 4vw, 32px);
+      color: #555;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════ HEADER ═══════════ -->
+  <header class="site-header">
+    <div class="max-w-screen-2xl mx-auto px-4 py-3">
+      <!-- Top row: logo + count -->
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <img src="icone/YTV.png" alt="YTV" class="logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+          <span style="display:none;font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.06em;color:#e50914;">YTV</span>
+          <span class="text-xs text-gray-500 hidden sm:inline">Sport Channels</span>
+        </div>
+        <span id="countBadge">— canali</span>
+      </div>
+
+      <!-- Search -->
+      <div class="search-wrap mb-3">
+        <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Cerca canale o categoria (es: calcio, moto, rally…)" autocomplete="off" />
+        <button id="clearBtn" aria-label="Cancella ricerca">×</button>
+      </div>
+
+      <!-- Filter pills -->
+      <div class="filter-pills" id="filterPills"></div>
+    </div>
+  </header>
+
+  <!-- ═══════════ GRID ═══════════ -->
+  <main class="max-w-screen-2xl mx-auto px-4 py-5">
+    <div class="channel-grid" id="channelGrid"></div>
+    <div id="noResults">
+      <svg width="48" height="48" fill="none" stroke="#555" stroke-width="1.5" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <p class="text-lg font-display tracking-wide">Nessun canale trovato</p>
+      <p class="text-sm mt-1">Prova con un altro termine o categoria</p>
+    </div>
+  </main>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="py-5 text-center text-xs text-gray-600">
+    <p>YTV · Aggregatore canali sportivi YouTube</p>
+    <p class="mt-1">Le icone e i nomi appartengono ai rispettivi proprietari</p>
+  </footer>
+
+  <!-- ═══════════ DATA + LOGIC ═══════════ -->
+  <script>
+  // ─── CHANNELS DATA ──────────────────────────────────────────────────────────
+  const channels = [
+    { name:"National Football League",  url:"https://youtube.com/@nfl",                                icon:"NFL.jpg",                 topics:["palla","football"] },
+    { name:"National Hockey League",    url:"https://youtube.com/@nhl",                                icon:"NHL.jpg",                 topics:["hockey"] },
+    { name:"World Wrestling Entertainment", url:"https://youtube.com/@wwe",                            icon:"WWE.jpg",                 topics:["lotta"] },
+    { name:"Competition Plus TV",       url:"https://youtube.com/@CompetitionPlusTv",                  icon:"CompetitionPlusTV.jpg",   topics:["motori","dragster"] },
+    { name:"National Hot Rod Association", url:"https://youtube.com/@nhra",                            icon:"NHRA.jpg",                topics:["motori","dragster"] },
+    { name:"Motorrad",                  url:"https://youtube.com/@motorrad",                           icon:"Motorrad.jpg",            topics:["motori","moto"] },
+    { name:"TTRace",                    url:"https://youtube.com/@TTRacesOfficial",                    icon:"TTrace.jpg",              topics:["motori","moto"] },
+    { name:"British Sidecar Championship", url:"https://youtube.com/@britishsidecarchampionship",      icon:"BSC.jpg",                 topics:["motori","moto","sidecar"] },
+    { name:"Minimoto",                  url:"https://youtube.com/@motominiws",                         icon:"Motomini.jpg",            topics:["motori","moto"] },
+    { name:"Chess",                     url:"https://youtube.com/@chess",                              icon:"chess.jpg",               topics:["tavolo"] },
+    { name:"FIA European Truck Racing Championship", url:"https://www.youtube.com/@FIAETRC",           icon:"ETRC.jpg",                topics:["motori","truck"] },
+    { name:"RC Racing TV",              url:"https://youtube.com/@RC-RacingTV",                        icon:"RCTV.jpg",                topics:["motori","rc"] },
+    { name:"Euro RC Series",            url:"https://youtube.com/@EURORCSERIES",                       icon:"EuroRC.jpg",              topics:["motori","rc"] },
+    { name:"GT World",                  url:"https://youtube.com/@GTWorld",                            icon:"GTWorld.jpg",             topics:["motori","gt & endurance"] },
+    { name:"Major League Baseball",     url:"https://youtube.com/@MLB",                                icon:"MLB.jpg",                 topics:["palla","baseball"] },
+    { name:"Professional Bowlers Association", url:"https://www.youtube.com/@pbatour",                 icon:"PBA.jpg",                 topics:["bowling"] },
+    { name:"FOX Sports",                url:"https://youtube.com/@foxsports",                          icon:"FOXS.jpg",                topics:["media"] },
+    { name:"Ultimate Frisbee Association", url:"https://www.youtube.com/@watchUFAtv",                  icon:"UFA.jpg",                 topics:["frisbee"] },
+    { name:"Lotus Cup",                 url:"https://youtube.com/@pbracing",                           icon:"PBRL.jpg",                topics:["motori","brand"] },
+    { name:"National Championship Air Races", url:"https://youtube.com/@NCAROfficial",                 icon:"NCAR.jpg",                topics:["volo","aviazione"] },
+    { name:"Sail GP",                   url:"https://youtube.com/@SailGP",                             icon:"sailgp.jpg",              topics:["nautica","vela"] },
+    { name:"Hill Climb Monsters",       url:"https://youtube.com/@HillClimbMonsters",                  icon:"HCM.jpg",                 topics:["motori","rally"] },
+    { name:"Lamborghini",               url:"https://youtube.com/@Lamborghini",                        icon:"lambo.jpg",               topics:["motori","brand"] },
+    { name:"NASCAR on FOX",             url:"https://youtube.com/@NASCARonFOX",                        icon:"FOXnascar.jpg",           topics:["motori","nascar"] },
+    { name:"NASCAR",                    url:"https://youtube.com/@NASCAR",                             icon:"nascar.jpg",              topics:["motori","nascar"] },
+    { name:"NASCAR Euro Series",        url:"https://youtube.com/@EuroNASCAR",                         icon:"nascares.jpg",            topics:["motori","nascar"] },
+    { name:"Ford Racing",               url:"https://youtube.com/@FordRacing",                         icon:"FR.jpg",                  topics:["motori","brand"] },
+    { name:"Nissan Racing",             url:"https://www.youtube.com/@NISMOchOfficial",                 icon:"nismo.jpg",               topics:["motori","brand"] },
+    { name:"Ferrari",                   url:"https://youtube.com/@Ferrari",                            icon:"ferrari.jpg",             topics:["motori","brand"] },
+    { name:"World Rally Championship",  url:"https://youtube.com/@wrc",                                icon:"wrc.jpg",                 topics:["motori","rally"] },
+    { name:"USAC Racing",               url:"https://www.youtube.com/@usacracing1956",                  icon:"USACR.jpg",               topics:["motori"] },
+    { name:"FloRacing",                 url:"https://www.youtube.com/@floracing",                       icon:"FloRacing.jpg",           topics:["motori"] },
+    { name:"Goodwood Road & Racing",    url:"https://youtube.com/@GoodwoodRR",                         icon:"GRR.jpg",                 topics:["motori"] },
+    { name:"RPM Army",                  url:"https://youtube.com/@RPMArmy",                            icon:"rpma.jpg",                topics:["motori","dragster"] },
+    { name:"Champions Karting",         url:"https://youtube.com/@championskarting",                   icon:"karting.jpg",             topics:["motori","kart"] },
+    { name:"Alpha Live",                url:"https://youtube.com/@AlphaLiveProductions",               icon:"alphalive.jpg",           topics:["media"] },
+    { name:"MotoE FIM",                 url:"https://youtube.com/@motoeofficial",                      icon:"motoe.jpg",               topics:["motori","moto"] },
+    { name:"World Endurance Championship", url:"https://youtube.com/@FIAWEC",                          icon:"wec.jpg",                 topics:["motori","gt & endurance"] },
+    { name:"EQU TV",                    url:"https://youtube.com/@EQUTVOfficial",                      icon:"equ.jpg",                 topics:["equitazione"] },
+    { name:"Nitrocircus",               url:"https://www.youtube.com/@nitrocircus",                    icon:"Nitrocircus.jpg",         topics:["motori","monster truck"] },
+    { name:"Racing Post",               url:"https://www.youtube.com/@racingpostofficial",              icon:"rp.jpg",                  topics:["equitazione"] },
+    { name:"Racing TV",                 url:"https://youtube.com/@RacingTV",                           icon:"rt.jpg",                  topics:["equitazione"] },
+    { name:"Giro d'Italia",             url:"https://youtube.com/@giroditalia",                        icon:"gi.jpg",                  topics:["ciclismo"] },
+    { name:"Eurosport Italia",          url:"https://youtube.com/@eurosport.italia",                   icon:"ei.jpg",                  topics:["multisport"] },
+    { name:"UE Cyclisme",               url:"https://youtube.com/@UECCHANNEL",                         icon:"uec.jpg",                 topics:["ciclismo"] },
+    { name:"UCI Mountain Bike World Series", url:"https://youtube.com/@uci_mtbworldseries",            icon:"umbws.jpg",               topics:["ciclismo","mtb"] },
+    { name:"FIFA",                      url:"https://youtube.com/@fifa",                               icon:"fifa.jpg",                topics:["palla","calcio"] },
+    { name:"Monster Jam",               url:"https://youtube.com/@MonsterJam",                         icon:"monsterjam.jpg",          topics:["motori","monster truck"] },
+    { name:"Battle Bots",               url:"https://youtube.com/@BattleBots",                         icon:"Battlebots.jpg",          topics:["robot"] },
+    { name:"W Series",                  url:"https://youtube.com/@WSeriesOfficial",                    icon:"Wserie.jpg",              topics:["motori","monoposto"] },
+    { name:"Ryder Cup",                 url:"https://youtube.com/@RyderCup",                           icon:"Rydercup.jpg",            topics:["palla","golf"] },
+    { name:"RedBull",                   url:"https://youtube.com/@redbull",                            icon:"RedBull.jpg",             topics:["multisport"] },
+    { name:"Toyota Gazoo Racing",       url:"https://youtube.com/@TOYOTAGAZOORacingJPchannel",         icon:"tgr.jpg",                 topics:["motori","brand"] },
+    { name:"Real Federación Española de Automovilismo", url:"https://youtube.com/@RFEdeAPrensa",       icon:"RFEA.jpg",                topics:["motori","gt & endurance"] },
+    { name:"Pull on This Truck and Tractor Pulling", url:"https://www.youtube.com/@pullonthistractorpulling", icon:"ptttp.jpg",        topics:["motori","truck"] },
+    { name:"Porsche Carrera Cup Italia", url:"https://youtube.com/@carreracupitaliatv",                 icon:"porchecupit.jpg",         topics:["motori","gt & endurance","brand"] },
+    { name:"Indycar",                   url:"https://youtube.com/@indycar",                            icon:"Indicar.jpg",             topics:["motori","monoposto"] },
+    { name:"Le Mans Cup",               url:"https://youtube.com/@LeMansCup",                          icon:"lemanscup.jpg",           topics:["motori","gt & endurance"] },
+    { name:"Italian F4",                url:"https://youtube.com/@Italianf4-Euro4",                    icon:"Itf4.jpg",                topics:["motori","monoposto"] },
+    { name:"IMSA",                      url:"https://youtube.com/@imsaofficial",                       icon:"imsa.jpg",                topics:["motori","gt & endurance"] },
+    { name:"Formula Drift",             url:"https://youtube.com/@formuladrift",                       icon:"formuladrift.jpg",        topics:["motori","drift"] },
+    { name:"Formula Regional European Championship", url:"https://www.youtube.com/c/FormulaRegionalEuropeanChampionshipbyAlpine", icon:"frec.jpg", topics:["motori","monoposto"] },
+    { name:"Formula X Italian Series",  url:"https://youtube.com/@FormulaXItalianSeries",              icon:"fxit.jpg",                topics:["motori","monoposto"] },
+    { name:"Rally Cross",               url:"https://www.youtube.com/@fia_rallycross",                  icon:"rallycross.jpg",          topics:["motori","rally"] },
+    { name:"F1 Academy",                url:"https://youtube.com/@f1academy",                          icon:"f1academy.jpg",           topics:["motori","monoposto"] },
+    { name:"Euro Legend Cars",          url:"https://youtube.com/@EuroLEGENDcars",                     icon:"ELC.jpg",                 topics:["motori","prototipi"] },
+    { name:"Scale Racing TV",           url:"https://youtube.com/@ScaleRacingTV",                      icon:"scrtv.jpg",               topics:["motori","rc"] },
+    { name:"Serie A",                   url:"https://youtube.com/@seriea",                             icon:"seriea.jpg",              topics:["palla","calcio"] },
+    { name:"ACI Sport TV",              url:"https://youtube.com/@ACISportTVofficial",                  icon:"acitv.jpg",               topics:["motori","touring"] },
+    { name:"Campionato Italiano Drifting", url:"https://youtube.com/@campionatoitalianodrifting8312",   icon:"cid.jpg",                 topics:["motori","drift"] },
+    { name:"CIS Prototipi",             url:"https://youtube.com/@cisprototipi",                       icon:"cis.jpg",                 topics:["motori","prototipi"] },
+    { name:"Federazione Italiana Judo Lotta Karate Arti Marziali", url:"https://youtube.com/@FIJLKAM_TV", icon:"fijlkam.jpg",         topics:["lotta"] },
+    { name:"Federazione Italiana Powerlifting", url:"https://youtube.com/@PLitalia",                   icon:"fipl.jpg",                topics:["forza"] },
+    { name:"Federazione Freccette",     url:"https://youtube.com/@FederazioneFreccette",               icon:"ff.jpg",                  topics:["mira","freccette"] },
+    { name:"Federazione Italiana Tennistavolo", url:"https://youtube.com/@Fitetofficial",              icon:"fitet.jpg",               topics:["racchetta"] },
+    { name:"Federazione Italiana Pentathlon Moderno", url:"https://youtube.com/@fipmfederazioneitalianapen2661", icon:"fipm.jpg",      topics:["multisport"] },
+    { name:"Kings League IT",           url:"https://youtube.com/@KingsLeagueIT",                      icon:"klit.jpg",                topics:["palla","calcio"] },
+    { name:"Campionato Italiano GT",    url:"https://youtube.com/@CampionatoItalianoGranTurismo",       icon:"cigt.jpg",                topics:["motori","gt & endurance"] },
+    { name:"World Pentathlon",          url:"https://youtube.com/@WorldPentathlon",                    icon:"worph.jpg",               topics:["multisport"] },
+    { name:"European Le Mans Series",   url:"https://youtube.com/@EuropeanLeMansSeriesOfficial",       icon:"elms.jpg",                topics:["motori","gt & endurance"] },
+    { name:"eSkootr Championship",      url:"https://youtube.com/@eSkootrChampionship",                icon:"esktrch.jpg",             topics:["motori","escooter"] },
+    { name:"Dakar",                     url:"https://youtube.com/@OfficialDakar",                      icon:"dakar.jpg",               topics:["motori","rally"] },
+    { name:"Copa Truck",                url:"https://youtube.com/@CopaTruck",                          icon:"copatrk.jpg",             topics:["motori","truck"] },
+    { name:"All4him Racing",            url:"https://www.youtube.com/all4himracingvideos",              icon:"all4himracingvideos.jpg", topics:["motori","demolition derby"] },
+    { name:"British Automobile Racing Club", url:"https://youtube.com/@britishautomobileracingclub",   icon:"barc.jpg",                topics:["motori"] },
+    { name:"Hell's Kitchen TV Monster Trucks", url:"https://youtube.com/@HKTVMonsterTrucks",           icon:"hktvmt.jpg",              topics:["motori","monster truck"] },
+    { name:"FIBA Basketball",           url:"https://youtube.com/@FIBA",                               icon:"fiba.jpg",                topics:["palla","basket"] },
+    { name:"Formula E",                 url:"https://youtube.com/@FIAFormulaE",                        icon:"fe.jpg",                  topics:["motori","monoposto"] },
+    { name:"GT4 European Series",       url:"https://youtube.com/@GT4EuropeanSeries",                  icon:"gt4es.jpg",               topics:["motori","gt & endurance"] },
+    { name:"DTM",                       url:"https://youtube.com/@DTM",                                icon:"dtm.jpg",                 topics:["motori","gt & endurance"] },
+    { name:"European Rally Championship", url:"https://youtube.com/@FIAERC",                           icon:"erc.jpg",                 topics:["motori","rally"] },
+    { name:"Monster Energy",            url:"https://youtube.com/@MonsterEnergy",                      icon:"monstren.jpg",            topics:["motori","brand"] },
+    { name:"MotoGP",                    url:"https://youtube.com/@motogp",                             icon:"motogp.jpg",              topics:["motori","moto"] },
+    { name:"MotoAmerica",               url:"https://youtube.com/@MotoAmerica",                        icon:"motoamerica.jpg",         topics:["motori","moto"] },
+    { name:"Superbike",                 url:"https://youtube.com/@worldsbk",                           icon:"sbk.jpg",                 topics:["motori","moto"] },
+    { name:"British Touring Car Championship", url:"https://youtube.com/@OfficialBTCC",                icon:"btcc.jpg",                topics:["motori","touring"] },
+    { name:"Super GT",                  url:"https://youtube.com/@SUPERGTOfficialChannel",              icon:"sgtoc.jpg",               topics:["motori","gt & endurance"] },
+    { name:"Euroleague Basketball",     url:"https://youtube.com/@euroleague",                         icon:"eulbk.jpg",               topics:["palla","basket"] },
+    { name:"Ultimate Fighting Championship", url:"https://youtube.com/@ufc",                           icon:"ufc.jpg",                 topics:["lotta"] },
+    { name:"ATP Tour",                  url:"https://youtube.com/@ATPTour",                            icon:"atp.jpg",                 topics:["racchetta"] },
+    { name:"WTA",                       url:"https://youtube.com/@WTA",                                icon:"wta.jpg",                 topics:["racchetta"] },
+    { name:"World Rugby",               url:"https://youtube.com/@WorldRugby",                         icon:"worldrug.jpg",            topics:["palla","rugby"] },
+    { name:"Six Nation Rugby",          url:"https://youtube.com/@SixNationsRugby",                    icon:"sixnation.png",           topics:["palla","rugby"] },
+    { name:"Nippon Professional Baseball", url:"https://youtube.com/@NPB.official",                    icon:"npb.png",                 topics:["palla","baseball"] },
+    { name:"International Cricket Council", url:"https://youtube.com/@ICC",                            icon:"icc.jpg",                 topics:["cricket"] },
+    { name:"International Handball Federation", url:"https://youtube.com/@ihfworldhandball",           icon:"ihfc.png",                topics:["palla","handball"] },
+    { name:"Volleyball World",          url:"https://youtube.com/@volleyballworld",                    icon:"vbllwrld.jpg",            topics:["palla","volley"] },
+    { name:"Beach Volleyball World",    url:"https://youtube.com/@beachvolleyballworld",               icon:"bvbllwrld.png",           topics:["palla","volley"] },
+    { name:"UEFA",                      url:"https://youtube.com/@UEFA",                               icon:"uefa.jpg",                topics:["palla","calcio"] },
+    { name:"National Basketball Association", url:"https://youtube.com/@NBA",                          icon:"nba.jpg",                 topics:["palla","basket"] },
+    { name:"AFC Asian Cup",             url:"https://youtube.com/@AFCAsianCup",                        icon:"AFC.jpg",                 topics:["palla","calcio"] },
+    { name:"Super Formula",             url:"https://youtube.com/@superformula_official",              icon:"superf.jpg",              topics:["motori","monoposto"] },
+    { name:"TRC TV",                    url:"https://youtube.com/@TCRTV",                              icon:"trctv.png",               topics:["motori","touring"] },
+    { name:"Guinness World Records",    url:"https://www.youtube.com/@guinnessworldrecords",           icon:"gwr.png",                 topics:["media"] },
+    { name:"International Table Tennis Federation", url:"https://youtube.com/@ITTFWorld",              icon:"ittf.png",                topics:["racchetta"] },
+    { name:"Badminton World Federation", url:"https://youtube.com/@BWF",                               icon:"bwf.jpg",                 topics:["racchetta"] },
+    { name:"Drift Master GP",           url:"https://youtube.com/@DriftMastersGrandPrix",              icon:"driftm.jpg",              topics:["motori","drift"] },
+    { name:"Kite Classes",              url:"https://youtube.com/@kiteclasses",                        icon:"kitec.jpg",               topics:["nautica","vela"] },
+    { name:"Drone Racing League",       url:"https://youtube.com/@Thedroneracingleague",               icon:"drl.jpg",                 topics:["volo","droni"] },
+    { name:"Multi GP Drone Racing",     url:"https://youtube.com/@MultiGP1",                           icon:"multigp.png",             topics:["volo","droni"] },
+    { name:"Race Of Champions",         url:"https://youtube.com/@raceofchampionstv",                  icon:"roc.jpg",                 topics:["motori"] },
+    { name:"Experimental Aircraft Association", url:"https://youtube.com/@EAA",                        icon:"eaa.jpg",                 topics:["volo","aviazione"] },
+    { name:"World Skateboard",          url:"https://youtube.com/@worldskatesb",                       icon:"wrldsktbrd.jpg",          topics:["extreme"] },
+    { name:"World Skate",               url:"https://youtube.com/@worldskate",                         icon:"wrldskt.jpg",             topics:["extreme"] },
+    { name:"World Skating",             url:"https://www.youtube.com/@SkatingISU",                     icon:"wrldska.jpg",             topics:["extreme"] },
+    { name:"World Surf League",         url:"https://youtube.com/@wsl",                                icon:"wls.png",                 topics:["nautica"] },
+    { name:"XGames",                    url:"https://youtube.com/@XGames",                             icon:"xgame.jpg",               topics:["extreme"] },
+    { name:"Street League Skateboarding", url:"https://youtube.com/@SLS",                              icon:"sls.jpg",                 topics:["extreme"] },
+    { name:"International Ski and Snowboard Federation", url:"https://youtube.com/@fissnowboard",      icon:"fis.jpg",                 topics:["extreme"] },
+    { name:"International Downhill Federation", url:"https://youtube.com/@IDFracing",                  icon:"idf.jpg",                 topics:["ciclismo","downhill"] },
+    { name:"WingFoil Racing",           url:"https://youtube.com/@wingfoilracing",                     icon:"wingfrc.png",             topics:["nautica","vela"] },
+    { name:"Chess IT",                  url:"https://youtube.com/@ChesscomIT",                         icon:"chessit.png",             topics:["tavolo"] },
+    { name:"CC TV+",                    url:"https://youtube.com/@CCTVVideoNewsAgency",                 icon:"CCtv.jpg",                topics:["multisport"] },
+    { name:"Planet Canoe",              url:"https://youtube.com/@PlanetCanoe",                        icon:"plancanoe.png",           topics:["nautica"] },
+    { name:"Paralimpiadi",              url:"https://www.youtube.com/@paralympics",                    icon:"paralymp.jpg",            topics:["multisport"] },
+    { name:"Olimpiadi",                 url:"https://youtube.com/@Olympics",                           icon:"olymp.png",               topics:["multisport"] },
+    { name:"Ninja Warrior",             url:"https://youtube.com/@NinjaWarrior",                       icon:"ninja.png",               topics:["extreme"] },
+    { name:"Go Pro",                    url:"https://youtube.com/@GoPro",                              icon:"gopro.png",               topics:["extreme"] },
+    { name:"FIRST Robotics Competition", url:"https://youtube.com/@FIRSTRoboticsCompetition",          icon:"robo.png",                topics:["robot"] },
+    { name:"Airsports FAI",             url:"https://youtube.com/@airsports_fai",                      icon:"fai.jpg",                 topics:["volo","aviazione"] },
+    { name:"Academy of Model Aeronautics", url:"https://youtube.com/@modelaircraft",                   icon:"Aoma.jpg",                topics:["motori","rc","volo"] },
+    { name:"World Rowing",              url:"https://youtube.com/@worldrowingofficial",                 icon:"wr.jpg",                  topics:["extreme"] },
+    { name:"F1H2O",                     url:"https://youtube.com/@F1h2o",                              icon:"f1h2o.jpg",               topics:["nautica","powerboat"] },
+    { name:"World Climbing",            url:"https://youtube.com/@worldclimbing",                      icon:"Worldbld.jpg",            topics:["extreme"] },
+    { name:"Motorsport UK",             url:"https://youtube.com/@OurMotorsportUK",                    icon:"motrsprtuk.jpg",          topics:["motori"] },
+    { name:"One Championship",          url:"https://youtube.com/@ONEChampionship",                    icon:"one.jpg",                 topics:["lotta"] },
+    { name:"World Aquatics",            url:"https://youtube.com/@WorldAquatics",                      icon:"worldaq.png",             topics:["nuoto"] },
+    { name:"CL TV",                     url:"https://youtube.com/@cltvdeportes",                       icon:"cltv.png",                topics:["multisport"] },
+    { name:"Essential RC",              url:"https://youtube.com/@EssentialRC",                        icon:"essential.jpg",           topics:["motori","rc"] },
+    { name:"BMW M",                     url:"https://www.youtube.com/@BMWM",                           icon:"bmwm.png",                topics:["motori","brand"] },
+    { name:"Formula 1",                 url:"https://www.youtube.com/@Formula1",                       icon:"f1.jpg",                  topics:["motori","monoposto"] },
+    { name:"Skysport",                  url:"https://www.youtube.com/@skysport",                       icon:"skysprt.png",             topics:["media"] },
+    { name:"Skysport F1",               url:"https://www.youtube.com/@skysportf1",                     icon:"skyf1.jpg",               topics:["media"] },
+    { name:"Modellismo RC",             url:"https://www.youtube.com/modellismorc",                     icon:"mrc.png",                 topics:["motori","rc"] },
+    { name:"Global Underwater Explorers", url:"https://www.youtube.com/@GUEdivers",                    icon:"gue.png",                 topics:["nautica","sub"] },
+    { name:"Volleyball World IT",       url:"https://www.youtube.com/@volleyballworlditalia",           icon:"vllbllit.jpg",            topics:["palla","volley"] },
+    { name:"FIPSAS",                    url:"https://www.youtube.com/@fipsas1942",                      icon:"fipsas.png",              topics:["nautica","sub"] },
+    { name:"Tiramisù World Cup",        url:"https://www.youtube.com/@Tiramisù WorldCup",               icon:"tira.png",                topics:["cooking"] },
+    { name:"World Transplant Games Federation", url:"https://www.youtube.com/@WTGF",                   icon:"wtgf.jpg",                topics:["multisport"] },
+    { name:"NASA",                      url:"https://www.youtube.com/@nasa",                           icon:"nasa.jpg",                topics:["volo","spazio"] },
+    { name:"Blue Origin",               url:"https://www.youtube.com/@Blueorigin",                     icon:"blueg.png",               topics:["volo","spazio"] },
+    { name:"SpaceX",                    url:"https://www.youtube.com/@Spacex",                         icon:"spacex.jpg",              topics:["volo","spazio"] },
+    { name:"GCN Racing",                url:"https://www.youtube.com/@GCNRacing",                      icon:"gnc.jpg",                 topics:["ciclismo"] },
+    { name:"World Archery",             url:"https://www.youtube.com/@WorldArcheryTV",                  icon:"wrldrch.png",             topics:["mira"] },
+    { name:"International Shooting Sport Federation", url:"https://www.youtube.com/@issfchannel",      icon:"issf.jpg",                topics:["mira"] },
+    { name:"World Athletics",           url:"https://www.youtube.com/@WorldAthletics",                  icon:"wrldathl.jpg",            topics:["multisport"] },
+    { name:"World Of Racing",           url:"https://www.youtube.com/@WorldOfRacingUSA",                icon:"wrldrcng.jpg",            topics:["motori"] },
+    { name:"International Hockey Federation", url:"https://www.youtube.com/@fihockey",                 icon:"fih.png",                 topics:["hockey"] },
+    { name:"Tulp Hoofd klasse",         url:"https://www.youtube.com/@TulpHoofdklasse",                 icon:"th.jpg",                  topics:["hockey"] },
+    { name:"Premier Boxing Champions",  url:"https://www.youtube.com/@PremierBoxingChampions",          icon:"pbc.png",                 topics:["lotta"] },
+    { name:"International Padel Federation", url:"https://www.youtube.com/@padelfip",                  icon:"fip.jpg",                 topics:["racchetta"] },
+    { name:"Professional Pickleball Association", url:"https://www.youtube.com/channel/UCSP6HlrMmRqogym2aHBPHpw", icon:"ppa.png",   topics:["racchetta"] },
+    { name:"Biliardo",                  url:"https://www.youtube.com/@ProBilliardTV",                   icon:"bllrd.png",               topics:["biliardo"] },
+    // archivi
+    { name:"Live Trains",               url:"https://www.youtube.com/@OfficialLiveTrains",              icon:"trains.png",              topics:["treni"] },
+    { name:"CoasterFan2105",            url:"https://www.youtube.com/@CoasterFan2105",                  icon:"cf2105.jpg",              topics:["treni"] },
+    { name:"Airspeeder",                url:"https://www.youtube.com/@Airspeeder",                      icon:"airspeeder.png",          topics:["volo","droni"] },
+    { name:"Pesca TV",                  url:"https://www.youtube.com/@PescaTVsky236",                   icon:"Pescatv.jpg",             topics:["pesca"] },
+    { name:"Superleague Formula",       url:"https://www.youtube.com/@thebeautifulrace",                icon:"sprlgfrm.png",            topics:["motori","monoposto"] },
+    { name:"Smash It Demolition Derby", url:"https://www.youtube.com/@smashitdemolitionderby1736",      icon:"smshit.jpg",              topics:["motori","demolition derby"] },
+    { name:"TV Total AutoBall",         url:"https://www.youtube.com/@TVtotal",                         icon:"tvtotal.jpg",             topics:["autoball"] },
+    { name:"Horseball",                 url:"https://www.youtube.com/@livehorseball1257",               icon:"horbll.png",              topics:["horseball"] },
+  ];
+
+  // ─── CATEGORIES for pills (derived from topics) ──────────────────────────
+  const PILL_CATEGORIES = [
+    { label:"Tutti",        filter:null },
+    { label:"⚽ Calcio",    filter:"calcio" },
+    { label:"🏎 Motori",    filter:"motori" },
+    { label:"🏍 Moto",      filter:"moto" },
+    { label:"🏁 Rally",     filter:"rally" },
+    { label:"🏆 GT/Endur.", filter:"gt & endurance" },
+    { label:"🏎 Monoposto", filter:"monoposto" },
+    { label:"🏀 Basket",    filter:"basket" },
+    { label:"🎾 Racchetta", filter:"racchetta" },
+    { label:"🥊 Lotta",     filter:"lotta" },
+    { label:"🚴 Ciclismo",  filter:"ciclismo" },
+    { label:"⛵ Nautica",   filter:"nautica" },
+    { label:"✈ Volo",      filter:"volo" },
+    { label:"🤸 Extreme",   filter:"extreme" },
+    { label:"🏉 Rugby",     filter:"rugby" },
+    { label:"📺 Media",     filter:"media" },
+  ];
+
+  // ─── STATE ────────────────────────────────────────────────────────────────
+  let activeFilter = null;
+  let searchQuery  = "";
+
+  // ─── ELEMENTS ─────────────────────────────────────────────────────────────
+  const grid        = document.getElementById("channelGrid");
+  const searchInput = document.getElementById("searchInput");
+  const clearBtn    = document.getElementById("clearBtn");
+  const noResults   = document.getElementById("noResults");
+  const countBadge  = document.getElementById("countBadge");
+  const pillsWrap   = document.getElementById("filterPills");
+
+  // ─── BUILD PILLS ─────────────────────────────────────────────────────────
+  PILL_CATEGORIES.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.className = "pill" + (cat.filter === null ? " active" : "");
+    btn.textContent = cat.label;
+    btn.dataset.filter = cat.filter ?? "";
+    btn.addEventListener("click", () => {
+      activeFilter = cat.filter;
+      searchInput.value = "";
+      searchQuery = "";
+      clearBtn.classList.remove("visible");
+      document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      render();
+    });
+    pillsWrap.appendChild(btn);
+  });
+
+  // ─── SEARCH ───────────────────────────────────────────────────────────────
+  searchInput.addEventListener("input", () => {
+    searchQuery = searchInput.value.trim().toLowerCase();
+    clearBtn.classList.toggle("visible", searchQuery.length > 0);
+    // reset pill highlight
+    document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    if (!searchQuery) {
+      activeFilter = null;
+      document.querySelector('.pill[data-filter=""]').classList.add("active");
+    }
+    render();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    searchInput.value = "";
+    searchQuery = "";
+    clearBtn.classList.remove("visible");
+    activeFilter = null;
+    document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    document.querySelector('.pill[data-filter=""]').classList.add("active");
+    render();
+  });
+
+  // ─── FILTER LOGIC ────────────────────────────────────────────────────────
+  function getFiltered() {
+    return channels.filter(ch => {
+      const matchesPill = !activeFilter || ch.topics.some(t => t === activeFilter);
+      if (!searchQuery) return matchesPill;
+      const q = searchQuery;
+      const nameMatch  = ch.name.toLowerCase().includes(q);
+      const topicMatch = ch.topics.some(t => t.toLowerCase().includes(q));
+      return nameMatch || topicMatch;
+    });
+  }
+
+  // ─── RENDER ───────────────────────────────────────────────────────────────
+  function render() {
+    const filtered = getFiltered();
+    countBadge.textContent = filtered.length + " canali";
+
+    if (filtered.length === 0) {
+      grid.innerHTML = "";
+      noResults.style.display = "block";
+      return;
+    }
+    noResults.style.display = "none";
+
+    // Use DocumentFragment for performance
+    const frag = document.createDocumentFragment();
+    filtered.forEach(ch => {
+      const card = document.createElement("div");
+      card.className = "channel-card";
+      card.title = ch.name;
+      card.addEventListener("click", () => {
+        // YouTube channel links redirect automatically if channel changes name
+        // Using @ handle URLs which are canonical and redirect-safe
+        window.open(ch.url, "_blank", "noopener,noreferrer");
+      });
+
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "card-img-wrap";
+
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.alt = ch.name;
+      img.src = "icone/" + ch.icon;
+      img.onerror = function() {
+        this.style.display = "none";
+        const ph = document.createElement("div");
+        ph.className = "img-placeholder";
+        ph.textContent = ch.name.substring(0,3).toUpperCase();
+        imgWrap.appendChild(ph);
+      };
+
+      const live = document.createElement("span");
+      live.className = "live-badge";
+      live.textContent = "LIVE";
+
+      imgWrap.appendChild(img);
+      imgWrap.appendChild(live);
+
+      const footer = document.createElement("div");
+      footer.className = "card-footer";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "card-name";
+      nameEl.textContent = ch.name;
+
+      const tagsEl = document.createElement("div");
+      tagsEl.className = "card-tags";
+      ch.topics.forEach(t => {
+        const tag = document.createElement("span");
+        tag.className = "card-tag";
+        tag.textContent = t;
+        tagsEl.appendChild(tag);
+      });
+
+      footer.appendChild(nameEl);
+      footer.appendChild(tagsEl);
+      card.appendChild(imgWrap);
+      card.appendChild(footer);
+      frag.appendChild(card);
+    });
+
+    grid.innerHTML = "";
+    grid.appendChild(frag);
+  }
+
+  // ─── INIT ─────────────────────────────────────────────────────────────────
+  render();
+
+  // ─── SERVICE WORKER ───────────────────────────────────────────────────────
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+  </script>
+</body>
+</html>
