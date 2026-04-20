@@ -286,7 +286,19 @@
           <span style="display:none;font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:0.06em;color:#e50914;">YTV</span>
           <span class="text-xs text-gray-500 hidden sm:inline">Sport Channels</span>
         </div>
-        <span id="countBadge">— canali</span>
+         <span id="countBadge">— canali</span>
+  <button onclick="
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+      });
+    }
+    caches.keys().then(keys => {
+      keys.forEach(k => caches.delete(k));
+    });
+    setTimeout(() => location.reload(true), 300);
+  " style="background:#2a2a2a;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;" 
+  title="Forza aggiornamento">🔄</button>
       </div>
 
       <!-- Search -->
