@@ -1,4 +1,4 @@
-const CACHE = "ytv-v1";
+const CACHE = "ytv-v2";
 const ASSETS = ["./index.html", "./manifest.json"];
 
 self.addEventListener("install", e => {
